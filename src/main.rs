@@ -174,8 +174,8 @@ fn main() {
                                 )),
                                 false => Pixel::new(x, y, Color::new(
                                     ((x * x) + (y * y) + 2 * iteration) as u8 % 255,
-                                    ((x * x) + (y * y) + 2 * iteration) as u8 % 255,
-                                    ((x * x) + (y * y) + 2 * iteration) as u8 % 255, 
+                                    ((x * x) + (y * y) + iteration)     as u8 % 255,
+                                    ((x * x) + (y * y))                 as u8 % 255, 
                                     ((x * x) + (y * y))                 as u8 % 255,
                                 )),
                             },
