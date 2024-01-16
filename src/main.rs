@@ -8,7 +8,6 @@ use evalexpr::*;
 const HOST: &str = "pixelflut.uwu.industries:1234";
 const HEIGHT: u16 = 720;
 const WIDTH: u16 = 1280;
-const DYN_SIZE: bool = true;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
@@ -30,6 +29,10 @@ impl Color {
         let a = split.next().unwrap().parse::<u8>().unwrap();
         Color::new(r, g, b, a)
     }
+    #[allow(dead_code)]
+    fn to_str(&self) -> String {
+        format!("{} {} {} {}", self.r, self.g, self.b, self.a)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -46,6 +49,7 @@ impl Pixel {
     fn to_string(&self) -> String {
         format!("PX {} {} {:02X}{:02X}{:02X}{:02X}\n", self.x, self.y, self.color.r, self.color.g, self.color.b, self.color.a)
     }
+    #[allow(dead_code)]
     fn from_str(s: &str) -> Pixel {
         let mut split = s.split_whitespace();
         let x = split.next().unwrap().parse::<u16>().unwrap();
@@ -94,12 +98,13 @@ fn dyn_size_get() -> Result<(u16, u16)> {
 }
 
 fn main() {
-    let _default_col: Color = Color::from_str("0 0 0 255");
+    let default_col: Color = Color::from_str("0 0 0 255");
     let args: Vec<String> = env::args().collect();
     let mut generate_noise: bool = false;
     let mut fill_back: bool = false;
     let mut patternize: bool = false;
     let mut pattern_eval: bool = false;
+    let mut dyn_size: bool = false;
     let mut r_formula: &str = "";
     let mut g_formula: &str = "";
     let mut b_formula: &str = "";
@@ -110,8 +115,12 @@ fn main() {
             match args[1].as_str() {
                 "-noise" => generate_noise = true,
                 "-fill" => fill_back = true,
+                "-dyn" => dyn_size = true,
                 "-help" => {
-                    println!("Usage: pixelflut-rs [OPTIONS]\n\nOPTIONS:\n\t-noise\t\t\tDraw random pixels\n\t-fill\t\t\tFill background with random color\n\t-pattern\t\tDraw a pattern (formulas currently broken)\n\t\t[\"RF\", \"GF\", \"BF\", \"AF\"]\n\t-help\t\t\tShow this help message");
+                    println!("Usage: pxf [OPTIONS]\n\nOPTIONS:\n\t-noise\t\t\tDraw random pixels\
+                    \n\t-fill\t\t\tFill background with random color\n\t-pattern\t\tDraw a pattern (formulas \
+                         currently broken)\n\t\t [\"RF\", \"GF\", \"BF\", \"AF\"]\n\t-help\t\t\tShow this help message\n\
+                         \t-dyn\t\t\tGet canvas size from server\n");
                     return;
                 },
                 "-pattern" => patternize = true,
@@ -122,11 +131,13 @@ fn main() {
             match args[1].as_str() {
                 "-noise" => generate_noise = true,
                 "-fill" => fill_back = true,
+                "-dyn" => dyn_size = true,
                 _ => println!("Invalid arguments, using default values"),
             }
             match args[2].as_str() {
                 "-noise" => generate_noise = true,
                 "-fill" => fill_back = true,
+                "-dyn" => dyn_size = true,
                 _ => println!("Invalid arguments, using default values"),
             }
         },
@@ -147,25 +158,25 @@ fn main() {
     }
     let w: u16;
     let h: u16;
-    match DYN_SIZE {
+    match dyn_size {
         true => (w, h) = dyn_size_get().unwrap(),
         false => (w, h) = (WIDTH, HEIGHT),
     };
-    if patternize {
-        let mut iteration: u16 = 0;
-        loop { println!("Iteration {}", iteration);
-            let bgc = random_color(false);
-            let mut pixelmap: Vec<Pixel> = Vec::new();
-            for x in 0..w {
-                for y in 0..h {
-                    let pixel: Pixel = match fill_back && generate_noise {
-                        true => Pixel::new(x, y, combine_colors(random_color(true), bgc)),
-                        false => match fill_back || generate_noise {
-                            true => match generate_noise {
-                                true => Pixel::new(x, y, random_color(true)),
-                                false => Pixel::new(x, y, bgc),
-                            },
-                            false => match pattern_eval {
+    let mut iteration: u16 = 0;
+    loop { println!("Iteration {}", iteration);
+        let bgc = random_color(false);
+        let mut pixelmap: Vec<Pixel> = Vec::new();
+        for x in 0..w {
+            for y in 0..h {
+                let pixel: Pixel = match fill_back && generate_noise {
+                    true => Pixel::new(x, y, combine_colors(random_color(true), bgc)),
+                    false => match fill_back || generate_noise {
+                        true => match generate_noise {
+                            true => Pixel::new(x, y, random_color(true)),
+                            false => Pixel::new(x, y, bgc),
+                        },
+                        false => match patternize {
+                            true => match pattern_eval {
                                 true => Pixel::new(x, y, Color::new(
                                     (eval_int(r_formula)).unwrap() as u8 % 255,
                                     (eval_int(g_formula)).unwrap() as u8 % 255,
@@ -177,36 +188,19 @@ fn main() {
                                     ((x * x) + (y * y) + iteration)     as u8 % 255,
                                     ((x * x) + (y * y))                 as u8 % 255, 
                                     ((x * x) + (y * y))                 as u8 % 255,
-                                )),
+                            )),
                             },
+                            false => Pixel::new(x, y, default_col),
                         },
-                    };
-                    pixelmap.push(pixel);
-                }
+                    },
+                };
+                pixelmap.push(pixel);
             }
-            let stream: Arc<Mutex<TcpStream>> = Arc::new(Mutex::new(TcpStream::connect(HOST).unwrap()));
-            for pixel in pixelmap {
-                stream.lock().unwrap().write(pixel.to_string().as_bytes()).unwrap();
-            }
-            iteration += 1;
         }
-    } else {    
         let stream: Arc<Mutex<TcpStream>> = Arc::new(Mutex::new(TcpStream::connect(HOST).unwrap()));
-        let mut iteration: u32 = 0;
-        loop { println!("Iteration {}", iteration);
-            let bgc = random_color(false);
-            for x in 0..w {
-                for y in 0..h {
-                    let bgpixel = Pixel::from_str(
-                        format!(
-                            "{} {} {} {} {} {}",
-                            x, y, bgc.r, bgc.g, bgc.b, bgc.a
-                        ).as_str());
-                    if fill_back        { stream.lock().unwrap().write(bgpixel.to_string().as_bytes()).unwrap(); }
-                    if generate_noise   { stream.lock().unwrap().write(Pixel::new(x, y, random_color(true)).to_string().as_bytes()).unwrap(); }
-                }
-            }     
-            iteration += 1;
+        for pixel in pixelmap {
+            stream.lock().unwrap().write(pixel.to_string().as_bytes()).unwrap();
         }
+        iteration += 1;
     }
 }
