@@ -103,8 +103,8 @@ fn serialize_pixelmap_to_file(pixelmap: Vec<Pixel>) -> () {
     for pixel in pixelmap {
         serialized.push_str(&pixel.to_string());
     }
-    let filename = format!("img{}.txt", rand::random::<i64>());
-    let mut file = File::create(filename.clone()).unwrap();
+    let filename: String = format!("img{}.txt", rand::random::<i64>());
+    let mut file: File = File::create(filename.clone()).unwrap();
     file.write_all(serialized.as_bytes()).unwrap();
     println!("Serialized pixelmap to {}", filename);
 }
