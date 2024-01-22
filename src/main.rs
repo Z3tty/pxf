@@ -266,10 +266,10 @@ fn main() -> Result<()> {
 
     let w: u16;
     let h: u16;
-
+    
     match dyn_size {
-        true => (w, h) = dyn_size_get()?,
-        false => (w, h) = (WIDTH, HEIGHT),
+        true    => (w, h) = dyn_size_get()?,
+        false   => (w, h) = (WIDTH, HEIGHT),
     };
 
     if capture {
