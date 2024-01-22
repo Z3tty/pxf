@@ -50,14 +50,28 @@ impl Pixel {
         Pixel { x, y, color }
     }
     fn to_string(&self) -> String {
-        format!("PX {} {} {:02X}{:02X}{:02X}{:02X}\n", self.x, self.y, self.color.r, self.color.g, self.color.b, self.color.a)
+        format!(
+            "PX {} {} {:02X}{:02X}{:02X}{:02X}\n",
+            self.x, self.y, 
+            self.color.r, self.color.g, self.color.b, self.color.a
+        )
     }
     fn from_str(s: &str) -> Pixel {
         let mut split = s.split_whitespace();
         split.next(); // Skip PX
-        let x: u16 = split.next().unwrap().parse::<u16>().unwrap();
-        let y: u16 = split.next().unwrap().parse::<u16>().unwrap();
-        let color_str: &str = split.next().unwrap();
+        let x: u16 = split
+                        .next()
+                        .unwrap()
+                        .parse::<u16>()
+                        .unwrap();
+        let y: u16 = split
+                        .next()
+                        .unwrap()
+                        .parse::<u16>()
+                        .unwrap();
+        let color_str: &str = split
+                                .next()
+                                .unwrap();
         let color: Color = Color::from_str(color_str);
         Pixel::new(x, y, color)
     }
@@ -69,8 +83,8 @@ fn random_color(r_alph: bool) -> Color {
         rand::random::<u8>(), 
         rand::random::<u8>(), 
         match r_alph {
-            true => rand::random::<u8>(),
-            false => 255,
+            true    => rand::random::<u8>(),
+            false   => 255,
         }
     )
 }
@@ -92,28 +106,37 @@ fn dyn_size_get() -> Result<(u16, u16)> {
     stream.read_to_string(&mut size)?;
     let mut split = size.split_whitespace();
     split.next();
-    let width: u16 = split.next().unwrap().parse::<u16>().unwrap();
-    let height: u16 = split.next().unwrap().parse::<u16>().unwrap();
+    let width: u16 = split
+                        .next()
+                        .unwrap()
+                        .parse::<u16>()
+                        .unwrap();
+    let height: u16 = split
+                        .next()
+                        .unwrap()
+                        .parse::<u16>()
+                        .unwrap();
     println!("Canvas size: {}x{}", width, height);
     Ok((width, height))
 }
 
-fn serialize_pixelmap_to_file(pixelmap: Vec<Pixel>) -> () {
+fn serialize_pixelmap_to_file(pixelmap: Vec<Pixel>) -> Result<()> {
     let mut serialized: String = String::new();
     for pixel in pixelmap {
         serialized.push_str(&pixel.to_string());
     }
     let filename: String = format!("img{}.txt", rand::random::<i64>());
-    let mut file: File = File::create(filename.clone()).unwrap();
-    file.write_all(serialized.as_bytes()).unwrap();
+    let mut file: File = File::create(filename.clone())?;
+    file.write_all(serialized.as_bytes())?;
     println!("Serialized pixelmap to {}", filename);
+    Ok(())
 }
 
 fn capture_canvas() -> Result<()> {
     println!("Capturing canvas");
     let w: u16;
     let h: u16;
-    (w, h) = dyn_size_get().unwrap();
+    (w, h) = dyn_size_get()?;
     let mut pixelmap: Vec<Pixel> = Vec::new();
     let mut stream: TcpStream = TcpStream::connect(HOST)?;
     for x in 0..w {
@@ -124,7 +147,7 @@ fn capture_canvas() -> Result<()> {
             pixelmap.push(Pixel::from_str(&pixel));
         }
     }
-    serialize_pixelmap_to_file(pixelmap);
+    let _ = serialize_pixelmap_to_file(pixelmap);
     Ok(())
 }
 
@@ -142,24 +165,41 @@ fn deserialize_to_pixelmap(filename: &str) -> Vec<Pixel> {
 fn draw_from_file(filename: &str) -> Result<()> {
     println!("Drawing from file {}", filename);
     let pixelmap: Vec<Pixel> = deserialize_to_pixelmap(filename);
-    let stream: Arc<Mutex<TcpStream>> = Arc::new(Mutex::new(TcpStream::connect(HOST)?));
+    let stream: Arc<Mutex<TcpStream>> = Arc::new(
+        Mutex::new(
+            TcpStream::connect(HOST)?
+        )
+    );
     for pixel in pixelmap {
-        stream.lock().unwrap().write(pixel.to_string().as_bytes()).unwrap();
+        stream
+        .lock()
+        .unwrap()
+        .write(
+            pixel
+            .to_string()
+            .as_bytes()
+        )?;
     }
     Ok(())
 }
 
 fn print_help() -> () {
-    println!("Usage: pxf [OPTIONS]\n\nOPTIONS:\n\t-noise\t\t\tDraw random pixels\
-    \n\t-fill\t\t\tFill background with random color\n\t-pattern\t\tDraw a pattern (formulas \
-         currently broken)\n\t\t [\"RF\", \"GF\", \"BF\", \"AF\"]\n\t-help\t\t\tShow this help message\n\
+    println!(
+        "Usage: pxf [OPTIONS]\n\n\
+        OPTIONS:\n\t\
+        -noise\t\t\tDraw random pixels\
+        \n\t-fill\t\t\tFill background with random color\
+        \n\t-pattern\t\tDraw a pattern (formulas \
+         currently broken)\n\t\t [\"RF\", \"GF\", \"BF\", \"AF\"]\n\t\
+         -help\t\t\tShow this help message\n\
          \t-dyn\t\t\tGet canvas size from server instead of using hardcoded aspect\n\
          \t-capture\t\tCapture canvas and save to file [UNFINISHED]\n\
          \t-from [FILENAME]\tDraw from file [UNFINISHED]\n\
-         \t-slice\t\t\tDraw slices across the canvas\n");
+         \t-slice\t\t\tDraw slices across the canvas\n"
+    );
 }
 
-fn main() -> () {
+fn main() -> Result<()> {
     let col: String = Color::new(255, 255, 255, 255).to_str();
     let default_col: Color = Color::from_str(&col);
     let args: Vec<String> = env::args().collect();
@@ -181,30 +221,30 @@ fn main() -> () {
         1 => println!("No arguments given, using default values"),
         2 => {
             match args[1].as_str() {
-                "-help" => { print_help(); return; },
-                "-noise" => generate_noise  = true,
-                "-fill" => fill_back        = true,
-                "-dyn" => dyn_size          = true,
-                "-pattern" => patternize    = true,
-                "-slice" => slice           = true,
-                "-capture" => capture       = true,
+                "-help"     => { print_help(); return Ok(()); },
+                "-noise"    => generate_noise   = true,
+                "-fill"     => fill_back        = true,
+                "-dyn"      => dyn_size         = true,
+                "-pattern"  => patternize       = true,
+                "-slice"    => slice            = true,
+                "-capture"  => capture          = true,
                 _ => println!("Invalid argument, using default values"),
             }
         },
         3 => {
             match args[1].as_str() {
-                "-noise" => generate_noise  = true,
-                "-fill" => fill_back        = true,
-                "-dyn" => dyn_size          = true,
-                "-slice" => slice           = true,
-                "-from" => file             = &args[2],
+                "-noise"    => generate_noise   = true,
+                "-fill"     => fill_back        = true,
+                "-dyn"      => dyn_size         = true,
+                "-slice"    => slice            = true,
+                "-from"     => file             = &args[2],
                 _ => println!("Invalid arguments, using default values"),
             }
             match args[2].as_str() {
-                "-noise" => generate_noise  = true,
-                "-fill" => fill_back        = true,
-                "-dyn" => dyn_size          = true,
-                "-slice" => slice           = true,
+                "-noise"    => generate_noise   = true,
+                "-fill"     => fill_back        = true,
+                "-dyn"      => dyn_size         = true,
+                "-slice"    => slice            = true,
                 _ => println!("Invalid arguments, using default values"),
             }
         },
@@ -228,18 +268,18 @@ fn main() -> () {
     let h: u16;
 
     match dyn_size {
-        true => (w, h) = dyn_size_get().unwrap(),
+        true => (w, h) = dyn_size_get()?,
         false => (w, h) = (WIDTH, HEIGHT),
     };
 
     if capture {
-        capture_canvas().unwrap();
-        return;
+        capture_canvas()?;
+        return Ok(());
     }
 
     if file != "" {
-        draw_from_file(file).unwrap();
-        return;
+        draw_from_file(file)?;
+        return Ok(());
     }
 
     if slice {
@@ -252,11 +292,22 @@ fn main() -> () {
                 pixelmap.push(pixel);
             }
         }
-        let stream: Arc<Mutex<TcpStream>> = Arc::new(Mutex::new(TcpStream::connect(HOST).unwrap()));
+        let stream: Arc<Mutex<TcpStream>> = Arc::new(
+            Mutex::new(
+                TcpStream::connect(HOST)?
+            )
+        );
         for pixel in pixelmap {
-            stream.lock().unwrap().write(pixel.to_string().as_bytes()).unwrap();
+            stream
+            .lock()
+            .unwrap()
+            .write(
+                pixel
+                .to_string()
+                .as_bytes()
+            )?;
         }
-        return;
+        return Ok(());
     }
 
     let mut iteration: u16 = 0;
@@ -266,37 +317,52 @@ fn main() -> () {
         for x in 0..w {
             for y in 0..h {
                 let pixel: Pixel = match fill_back && generate_noise {
-                    true => Pixel::new(x, y, combine_colors(random_color(true), bgc)),
-                    false => match fill_back || generate_noise {
-                        true => match generate_noise {
-                            true => Pixel::new(x, y, random_color(true)),
-                            false => Pixel::new(x, y, bgc),
-                        },
-                        false => match patternize {
-                            true => match pattern_eval {
-                                true => Pixel::new(x, y, Color::new(
-                                    (eval_int(r_formula)).unwrap() as u8 % 255,
-                                    (eval_int(g_formula)).unwrap() as u8 % 255,
-                                    (eval_int(b_formula)).unwrap() as u8 % 255, 
-                                    (eval_int(a_formula)).unwrap() as u8 % 255,
-                                )),
-                                false => Pixel::new(x, y, Color::new(
-                                    ((x * x) + (y * y) + 2 * iteration) as u8 % 255,
-                                    ((x * x) + (y * y) + iteration)     as u8 % 255,
-                                    ((x * x) + (y * y))                 as u8 % 255, 
-                                    ((x * x) + (y * y))                 as u8 % 255,
-                            )),
+                    true    => Pixel::new(x, y, combine_colors(random_color(true), bgc)),
+                    false   => 
+                        match fill_back || generate_noise {
+                            true    => 
+                                match generate_noise {
+                                    true    => Pixel::new(x, y, random_color(true)),
+                                    false   => Pixel::new(x, y, bgc),
+                                },
+                            false   => 
+                                match patternize {
+                                    true    => 
+                                        match pattern_eval {
+                                            true    => Pixel::new(x, y, Color::new(
+                                                (eval_int(r_formula)).unwrap() as u8 % 255,
+                                                (eval_int(g_formula)).unwrap() as u8 % 255,
+                                                (eval_int(b_formula)).unwrap() as u8 % 255, 
+                                                (eval_int(a_formula)).unwrap() as u8 % 255,
+                                            )),
+                                            false   => Pixel::new(x, y, Color::new(
+                                                ((x * x) + (y * y) + 2 * iteration) as u8 % 255,
+                                                ((x * x) + (y * y) + iteration)     as u8 % 255,
+                                                ((x * x) + (y * y))                 as u8 % 255, 
+                                                ((x * x) + (y * y))                 as u8 % 255,
+                                            )),
+                                        },
+                                    false => Pixel::new(x, y, default_col),
                             },
-                            false => Pixel::new(x, y, default_col),
                         },
-                    },
                 };
                 pixelmap.push(pixel);
             }
         }
-        let stream: Arc<Mutex<TcpStream>> = Arc::new(Mutex::new(TcpStream::connect(HOST).unwrap()));
+        let stream: Arc<Mutex<TcpStream>> = Arc::new(
+            Mutex::new(
+                TcpStream::connect(HOST)?
+            )
+        );
         for pixel in pixelmap {
-            stream.lock().unwrap().write(pixel.to_string().as_bytes()).unwrap();
+            stream
+            .lock()
+            .unwrap()
+            .write(
+                pixel
+                .to_string()
+                .as_bytes()
+            )?;
         }
         iteration += 1;
     }
