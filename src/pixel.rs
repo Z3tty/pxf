@@ -1,4 +1,17 @@
 pub mod pixel {
+    /*
+     * Color
+     * @desc: A struct representing a color code
+     * @fields:
+     *      r: u8
+     *      g: u8
+     *      b: u8
+     *      a: u8
+     * @methods:
+     *      new(r: u8, g: u8, b: u8, a: u8) -> Color
+     *      from_str(s: &str) -> Color
+     *      to_str() -> String
+     */
     #[derive(Debug, Clone, Copy)]
     pub struct Color {
         pub r: u8,
@@ -26,6 +39,18 @@ pub mod pixel {
         }
     }
 
+    /*
+     * Pixel
+     * @desc: A struct representing a pixel
+     * @fields:
+     *      x: u16
+     *      y: u16
+     *      color: Color
+     * @methods:
+     *      new(x: u16, y: u16, color: Color) -> Pixel
+     *      to_string() -> String
+     *      from_str(s: &str) -> Pixel
+     */
     #[derive(Debug, Clone, Copy)]
     pub struct Pixel {
         pub x: u16,
@@ -65,6 +90,12 @@ pub mod pixel {
         }
     }
 
+    /*
+     * random_color()
+     * In: bool
+     * Out: Color
+     * @desc: Generates a random color
+     */
     pub fn random_color(r_alph: bool) -> Color {
         Color::new(
             rand::random::<u8>(),
@@ -77,6 +108,12 @@ pub mod pixel {
         )
     }
 
+    /*
+     * combine_colors()
+     * In: Color, Color
+     * Out: Color
+     * @desc: Combines two colors into an averaged color
+     */
     pub fn combine_colors(c1: Color, c2: Color) -> Color {
         Color::new(
             (c1.r + c2.r) / 2,

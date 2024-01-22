@@ -10,6 +10,12 @@ mod ext;
 use pixel::pixel::*;
 use ext::ext::*;
 
+/*
+ * print_help()
+ * In: ()
+ * Out: ()
+ * @desc: Prints the help message
+ */
 fn print_help() -> () {
     println!(
         "Usage: pxf [OPTIONS]\n\n\
@@ -26,11 +32,19 @@ fn print_help() -> () {
     );
 }
 
+/*
+ * main()
+ * In: ()
+ * Out: Result<()>
+ * @desc: Entry Point
+ */
 fn main() -> Result<()> {
+    // Default color setting for screenwipe
     let col: String = Color::new(255, 255, 255, 255).to_str();
     let default_col: Color = Color::from_str(&col);
     let args: Vec<String> = env::args().collect();
 
+    // Placeholders for env arg parsing
     let mut generate_noise: bool    = false;
     let mut fill_back: bool         = false;
     let mut patternize: bool        = false;
@@ -44,6 +58,10 @@ fn main() -> Result<()> {
     let mut b_formula: &str         =    "";
     let mut a_formula: &str         =    "";
 
+    // Parse env args
+    // NOTE: There are FOR SURE argument conflicts here
+    // I dont feel like testing it, unexpected behavior is a user skill issue
+    // Honestly? Cry about it.
     match args.len() {
         1 => println!("No arguments given, using default values"),
         2 => {
@@ -90,25 +108,25 @@ fn main() -> Result<()> {
         }
         _ => println!("Invalid argument count, using default values"),
     }
-
+    // Canvas dimensions
     let w: u16;
     let h: u16;
-    
+    // If we're using dynamic size, get it from the server
     match dyn_size {
         true    => (w, h) = dyn_size_get()?,
         false   => (w, h) = (WIDTH, HEIGHT),
     };
-
+    // If we're saving the canvas, capture it
     if capture {
         capture_canvas()?;
         return Ok(());
     }
-
+    // If we're drawing from a previously saved file, rehydrate it
     if file != "" {
         draw_from_file(file)?;
         return Ok(());
     }
-
+    // Funny lines
     if slice {
         let mut pixelmap: Vec<Pixel> = Vec::new();
         for x in 0..w {
@@ -136,13 +154,17 @@ fn main() -> Result<()> {
         }
         return Ok(());
     }
-
+    // All other options work on iterations
     let mut iteration: u16 = 0;
     loop { println!("Iteration {}", iteration);
         let bgc = random_color(false);
         let mut pixelmap: Vec<Pixel> = Vec::new();
         for x in 0..w {
             for y in 0..h {
+                // I am so, so sorry. Don't emulate this. Don't learn from this. Don't do this. Ever. Please. I'm begging you.
+                // Matter of fact, this just generates the pixel values based on supplied args.
+                // Dont even look at it.
+                // Be happy.
                 let pixel: Pixel = match fill_back && generate_noise {
                     true    => Pixel::new(x, y, combine_colors(random_color(true), bgc)),
                     false   => 
@@ -173,14 +195,17 @@ fn main() -> Result<()> {
                             },
                         },
                 };
+                // Generate every pixel we want to draw, before bothering the server with tcp requests
                 pixelmap.push(pixel);
             }
         }
+        // Open a connection
         let stream: Arc<Mutex<TcpStream>> = Arc::new(
             Mutex::new(
                 TcpStream::connect(HOST)?
             )
         );
+        // Ship 'em
         for pixel in pixelmap {
             stream
             .lock()

@@ -9,6 +9,12 @@ pub mod ext {
     pub const HEIGHT: u16   = 720;
     pub const WIDTH: u16    = 1280;
 
+    /*
+     * dyn_size_get()
+     * In: ()
+     * Out: Result<(u16, u16)>
+     * @desc: Fetches the size of the canvas from the server
+     */
     pub fn dyn_size_get() -> Result<(u16, u16)> {
         println!("Getting canvas size");
         let mut stream: TcpStream = TcpStream::connect(HOST)?;
@@ -31,6 +37,12 @@ pub mod ext {
         Ok((width, height))
     }
     
+    /*
+     * serialize_pixelmap_to_file()
+     * In: Vec<Pixel>
+     * Out: Result<()>
+     * @desc: Serializes a pixelmap to text and stores it to a file
+     */
     pub fn serialize_pixelmap_to_file(pixelmap: Vec<Pixel>) -> Result<()> {
         let mut serialized: String = String::new();
         for pixel in pixelmap {
@@ -43,6 +55,12 @@ pub mod ext {
         Ok(())
     }
     
+    /*
+     * capture_canvas()
+     * In: ()
+     * Out: Result<()>
+     * @desc: Fetches the pixels on the canvas at the moment, serializes them to a file
+     */
     pub fn capture_canvas() -> Result<()> {
         println!("Capturing canvas");
         let w: u16;
@@ -62,6 +80,12 @@ pub mod ext {
         Ok(())
     }
     
+    /*
+     * deserialize_to_pixelmap()
+     * In: &str
+     * Out: Vec<Pixel>
+     * @desc: Deserializes a pixelmap from a file
+     */
     pub fn deserialize_to_pixelmap(filename: &str) -> Vec<Pixel> {
         let mut file: File = File::open(filename).unwrap();
         let mut contents: String = String::new();
@@ -73,6 +97,12 @@ pub mod ext {
         pixelmap
     }
     
+    /*
+     * draw_from_file()
+     * In: &str
+     * Out: Result<()>
+     * @desc: Rehydrates and draws a pixelmap based on a file
+     */
     pub fn draw_from_file(filename: &str) -> Result<()> {
         println!("Drawing from file {}", filename);
         let pixelmap: Vec<Pixel> = deserialize_to_pixelmap(filename);
